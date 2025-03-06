@@ -14,8 +14,15 @@
 #endif
 
 int LASER = PD6;
-int SENSOR = PC4;
-int DELAY_US = 10000;
+// SMD
+int SENSOR_OUT = A4;
+int SENSOR_VCC = A2;
+int SENSOR_GND = A3;
+// COMMON
+/*int SENSOR_OUT = A3;
+int SENSOR_VCC = A2;
+int SENSOR_GND = A4;*/
+int DELAY_US = 0;
 
 char* MESSAGE = "Pozdrav z Marsu o7";
 int CHAR_LEN = 8;
@@ -29,7 +36,7 @@ int received = 0;
 
 int receive() {
   delayMicroseconds(DELAY_US);
-  int value = 1024 - analogRead(SENSOR);
+  int value = analogRead(SENSOR_OUT);
   minReceived = MIN(minReceived, value);
   maxReceived = MAX(maxReceived, value);
   received++;
@@ -51,22 +58,75 @@ void transmit(bool data) {
 /// @brief Computes current thresshold value from sensor data 
 int quickSync() {
   char mask = 0b10111001;
-  int minHigh = INT16_MAX;
-  int maxLow = INT16_MIN;
-  for(int i = 0; i < 8; i++) {
-    bool bit = (mask >> i) & 1;
-    transmit(bit);
-    int value = receive();
-    if(bit) {
-      minHigh = MIN(minHigh, value);
-    } else {  
-      maxLow = MAX(maxLow, value);
+  int thresshold = 0;
+  bool synced = false;
+  DELAY_US = 0;
+  do {
+    int highMin = INT16_MAX;
+    int highMax = INT16_MIN;
+    int lowMin = INT16_MAX;
+    int lowMax = INT16_MIN;
+    int values[8];
+    // Send and receive to get both values and range
+    for(int i = 0; i < 8; i++) {
+      bool bit = (mask >> i) & 1;
+      transmit(bit);
+      int value = receive();
+      if(bit) {
+        highMin = MIN(highMin, value);
+        highMax = MAX(highMax, value);
+      } else {  
+        lowMin = MIN(lowMin, value);
+        lowMax = MAX(lowMax, value);
+      }
+      values[i] = value;
     }
-  }
-  transmit(LOW);
-  thresshold = (minHigh - maxLow) / 2 + maxLow;
-  Serial.print(">thresshold:");
-  Serial.println(thresshold);
+
+    transmit(LOW);
+    // Compute thresshold for binary encoding
+    thresshold = (highMin - lowMax) / 2 + lowMax;
+    
+    Serial.print(">thresshold:");
+    Serial.println(thresshold);
+    Serial.print(">high_min:");
+    Serial.println(highMin);
+    Serial.print(">high_max:");
+    Serial.println(highMax);
+    Serial.print(">low_min:");
+    Serial.println(lowMin);
+    Serial.print(">low_max:");
+    Serial.println(lowMax);
+    Serial.print(">delay:");
+    Serial.print(DELAY_US);
+    Serial.println("§us");
+    
+    // Encode values using thresshold and validate data
+    if(thresshold > highMin || thresshold < lowMax) {      
+      Serial.print(">err:");
+      Serial.println(2);
+      Serial.flush();
+      DELAY_US++;
+      if(DELAY_US > 1000) DELAY_US = 1;
+      break;
+    }
+
+    for(int i = 0; i < 8; i++) {
+      bool sent = (mask >> i) & 1;
+      bool received = toData(values[i], thresshold);
+      synced = sent == received;
+      if(!synced) {    
+        Serial.print(">err:");
+        Serial.println(1);
+        Serial.flush();
+        DELAY_US++;
+        if(DELAY_US > 1000) DELAY_US = 1;
+        break;
+      }
+    }
+    
+    Serial.print(">err:");
+    Serial.println(0);
+  } while(!synced);
   return thresshold;
 }
 
@@ -112,7 +172,13 @@ void setup() {
   digitalWrite(LASER, LOW);
 
   // Setup receiver pins
-  pinMode(SENSOR, INPUT);
+  pinMode(SENSOR_VCC, OUTPUT);
+  digitalWrite(SENSOR_VCC, HIGH);
+  pinMode(SENSOR_GND, OUTPUT);
+  digitalWrite(SENSOR_GND, LOW);
+  pinMode(SENSOR_OUT, OUTPUT);
+  digitalWrite(SENSOR_OUT, LOW);
+  pinMode(SENSOR_OUT, INPUT);
 
   
   #if FASTADC
@@ -175,7 +241,7 @@ void loop() {
   return;*/
 
   // Transmit & Receive message  
-  long start_msg = millis();
+  long start_msg = micros();
   long flashes_msg = 0;
   int valid = 0;
   long time_char_min = INT32_MAX;
@@ -188,7 +254,7 @@ void loop() {
     int letter = encode_data(MESSAGE[i], CHAR_LEN, &encoded_lenght);
     int receivedLetter = 0;
     
-    long start_char = millis();
+    long start_char = micros();
     long flashes_char = 0;
     for(int j = 0; j < encoded_lenght; j++) {
       // Transmit bit
@@ -204,7 +270,7 @@ void loop() {
       // Serial monitor output
       if(sent == received) valid++;
     }
-    long end_char = millis();
+    long end_char = micros();
     long timeChar = end_char - start_char;
     time_char_min = MIN(time_char_min, timeChar);
     time_char_max = MAX(time_char_max, timeChar);
@@ -218,24 +284,24 @@ void loop() {
       receivedMessage[i] = '#';
     }
   }
-  long end_msg = millis();
+  long end_msg = micros();
   
   // Stop transmitting
   transmit(LOW);
   
   Serial.print(">t_min_char:");
   Serial.print(time_char_min);
-  Serial.println("§ms");
+  Serial.println("§us");
   Serial.print(">t_max_char:");
   Serial.print(time_char_max);
-  Serial.println("§ms");
+  Serial.println("§us");
   Serial.print(">f_min_char:");
   Serial.println(flashes_char_min);
   Serial.print(">f_max_char:");
   Serial.println(flashes_char_max);
   Serial.print(">t_msg:");
   Serial.print(end_msg-start_msg);
-  Serial.println("§ms");
+  Serial.println("§us");
   Serial.print(">f_msg:");
   Serial.println(flashes_msg);
   Serial.print(">valid:");
