@@ -1,6 +1,6 @@
 #pragma once
 #include "Random.h"
-#include "Serial.hpp"
+#include "Serial.h"
 
 #ifndef cbi
 #define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))

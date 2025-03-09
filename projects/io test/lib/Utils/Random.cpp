@@ -1,4 +1,3 @@
-#include <Arduino.h>
 #include "Random.h"
 
 /* Seed variables */
@@ -17,7 +16,6 @@ uint64_t jkiss()
   return jkx+jky+jkz;
 }
 
-template<typename T>
-T random(T min, T max) {
-  return (min + jkiss()) % max;
+int64_t randomInRange(int64_t min, int64_t max) {
+  return (min + jkiss()) % (max + 1);
 }

@@ -1,4 +1,4 @@
 #pragma once
+#include <Arduino.h>
 
-template<typename T>
-T random(T min, T max);
+int64_t randomInRange(int64_t min, int64_t max);
