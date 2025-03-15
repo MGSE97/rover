@@ -1,6 +1,14 @@
 #include "MotorDriverComponent.h"
 
-MotorDriverHwComponent::MotorDriverHwComponent(MotorPins left, MotorPins right, uint8_t stop_time, uint8_t spin_time) {
+const char* DIRECTION_STR[] = {
+  "Left", 
+  "Right", 
+  "Forward", 
+  "Backward", 
+  "Stop"
+};
+
+MotorDriverHwComponent::MotorDriverHwComponent(MotorPins left, MotorPins right, u8 stop_time, u8 spin_time) {
   Left = left;
   Right = right;
   CurrentSpeed = 0;
@@ -19,7 +27,7 @@ void MotorDriverHwComponent::init() {
   init(Right);
 }
 
-void MotorDriverHwComponent::drive(Direction direction, uint8_t speed) {
+void MotorDriverHwComponent::drive(Direction direction, u8 speed) {
   now = millis();
   long int elapsed = now - lastStarted;
   
@@ -27,7 +35,7 @@ void MotorDriverHwComponent::drive(Direction direction, uint8_t speed) {
   //  1. wait a while for wheel to stop
   //  2. Spin wheel with full power to break friction
   //  3. Spin wheel with specified speed  
-  uint8_t safe_speed = 0;
+  u8 safe_speed = 0;
   if(direction != CurrentDirection) {
     lastStarted = now;
     safe_speed = 0;
@@ -39,7 +47,7 @@ void MotorDriverHwComponent::drive(Direction direction, uint8_t speed) {
     safe_speed = 0;
   }
 
-  uint8_t power = map(safe_speed, 0, 100, 50, 255);
+  u8 power = map(safe_speed, 0, 100, 50, 255);
   Teleplot.sendInt("Direction", direction);
   Teleplot.sendInt("Power", power);
   Teleplot.sendInt("Speed", speed);
@@ -87,7 +95,7 @@ void MotorDriverHwComponent::drop(MotorPins side) {
   analogWrite(side.Power, 0);
 }
 
-void MotorDriverHwComponent::set(MotorPins side, uint8_t power, bool swap) {
+void MotorDriverHwComponent::set(MotorPins side, u8 power, bool swap) {
   digitalWrite(side.High, swap ? LOW : HIGH);
   digitalWrite(side.Low, swap ? HIGH : LOW);
   analogWrite(side.Power, power);

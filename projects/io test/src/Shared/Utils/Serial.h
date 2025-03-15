@@ -1,4 +1,3 @@
-#pragma once
 #include <Arduino.h>
 
 class TeleplotSerial {
@@ -6,8 +5,11 @@ class TeleplotSerial {
     size_t sendText(const char* name, char* value);
     size_t sendText(const char* name, char* value, char* unit);
 
-    size_t sendInt(const char* name, int value);
-    size_t sendInt(const char* name, int value, char* unit);
+    size_t sendInt(const char* name, long value);
+    size_t sendInt(const char* name, long value, char* unit);
+
+    size_t sendUInt(const char* name, unsigned long value);
+    size_t sendUInt(const char* name, unsigned long value, char* unit);
 
     size_t sendDouble(const char* name, double value);
     size_t sendDouble(const char* name, double value, char* unit);

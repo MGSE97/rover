@@ -1,14 +1,25 @@
-#pragma once
-#include <DisplayComponent.h>
-#include <MotorDriverComponent.h>
-#include <Utils.h>
-#include <clib/u8g.h>
+#ifndef INFO_DISPLAY_H
+#define INFO_DISPLAY_H
 
-enum Scenes {PoweredOnStats, LightSensorStatus, MotorDriverStatus, SwitchesStatus};
+#include <clib/u8g.h>
+#include "Libs.h"
+
+enum Scenes {
+  PoweredOnStats, 
+  LightSensorStatus,
+  MotorDriverStatus,
+  SwitchesStatus,
+  DistanceSensorStatus
+};
 
 struct LightSensorsData {
-  uint16_t value1;
-  uint16_t value2;
+  u16 value1;
+  u16 value2;
+};
+
+struct DistanceSensorsData {
+  double distance;
+  time duration;
 };
 
 struct SwitchesData {
@@ -17,7 +28,7 @@ struct SwitchesData {
 
 struct MotorDriverData {
   Direction direction;
-  uint8_t speed;
+  u8 speed;
 };
 
 class InfoDisplay: public DisplayHwComponent {
@@ -26,8 +37,9 @@ class InfoDisplay: public DisplayHwComponent {
     LightSensorsData* LightSensors;
     MotorDriverData* MotorDriver;
     SwitchesData* Switch;
+    DistanceSensorsData* DistanceSensor;
 
-    inline InfoDisplay(uint8_t refresh_ms = 25, uint8_t i2c_options = U8G_I2C_OPT_FAST)
+    inline InfoDisplay(u8 refresh_ms = 25, u8 i2c_options = U8G_I2C_OPT_FAST)
       : DisplayHwComponent(refresh_ms, i2c_options) {}
 
     void init();
@@ -38,9 +50,9 @@ class InfoDisplay: public DisplayHwComponent {
     void drawContent();
 
   private:
-    uint8_t size = 0;
-    uint8_t lineHeight = 0;
-    uint8_t fullLineHeight = 0;
+    u8 size = 0;
+    u8 lineHeight = 0;
+    u8 fullLineHeight = 0;
     
     void drawSceneSwitchStatus();
 
@@ -48,9 +60,13 @@ class InfoDisplay: public DisplayHwComponent {
 
     void drawSceneMotorDriverStatus();
 
+    void drawSceneDistanceSensorStatus();
+
     void drawScenePoweredOnStats();
 
-    void drawVar(Point position, const char* name, const char* value);
+    void drawVar(Point position, const char* name, const char* value, const char* unit = "");
 
     void drawText(Point position, const char* text);
 };
+
+#endif

@@ -19,8 +19,8 @@ This is a simplified pinout of the board. Full pinout can be found [here](https:
         PC3 ---> ║ [◼] A3      ┃  328P  ┃    D6  [◼] ║ <--- PD6 | PWM
   SDA | PC4 ---> ║ [◼] A4      ┗━━━━━━━━┛    D5  [◼] ║ <--- PD5 | PWM
   SCL | PC5 ---> ║ [◼] A5     ╔══════════╗   D4  [◼] ║ <--- PD4 | PWM
-                 ║ [◼] A6     ║ ████████ ║   D3  [◼] ║ <--- PD3 | PWM
-                 ║ [◼] A7     ╚══════════╝   D2  [◼] ║ <--- PD2
+                 ║ [◼] A6     ║ ████████ ║   D3  [◼] ║ <--- PD3 | PWM | INT1
+                 ║ [◼] A7     ╚══════════╝   D2  [◼] ║ <--- PD2       | INT0
                  ║ [◼] +5V    RESET BUTTON   GND [◼] ║
 RESET | PC6 ---> ║ [◼] RST  ┌─┐ ┌─┐ ┌─┐ ┌─┐  RST [◼] ║ <--- PC6 | RESET
                  ║ [◼] GND  │█│ │█│ │█│ │█│  RX0 [◼] ║ <--- PD0 | RX

@@ -1,6 +1,6 @@
 #include "LightSensorComponent.h"
 
-LightSensorHwComponent::LightSensorHwComponent(uint8_t pin) {
+LightSensorHwComponent::LightSensorHwComponent(pin pin) {
   Pin = pin;
 }
 
@@ -19,6 +19,6 @@ void LightSensorHwComponent::init() {
   cbi(ADCSRA,ADPS0);
 }
 
-uint16_t LightSensorHwComponent::receive() {
+u16 LightSensorHwComponent::receive() {
   return analogRead(Pin);
 }

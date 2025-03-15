@@ -1,9 +1,9 @@
 
 #include "info_display.h"
 
-const uint8_t CIRCLES = 5;
+const u8 CIRCLES = 5;
 
-const uint8_t bitmapKey[] U8G_PROGMEM = {
+const u8 bitmapKey[] U8G_PROGMEM = {
   0b00111100,
   0b01100110,
   0b00111100,
@@ -36,6 +36,9 @@ void InfoDisplay::drawContent() {
     case LightSensorStatus:
       drawSceneLightSensorStatus();
       break;
+    case DistanceSensorStatus:
+      drawSceneDistanceSensorStatus();
+      break;
     case MotorDriverStatus:
       drawSceneMotorDriverStatus();
       break;
@@ -49,7 +52,7 @@ void InfoDisplay::drawSceneSwitchStatus() {
   if(Switch == nullptr) return;
   
   char status[7];
-  for(uint8_t i = 0; i < 6; i++) status[i] = Switch->values[i] ? '1' : '0';
+  for(u8 i = 0; i < 6; i++) status[i] = Switch->values[i] ? '1' : '0';
   status[7] = '\0';
   
   Device.setColorIndex(1);
@@ -69,16 +72,29 @@ void InfoDisplay::drawSceneLightSensorStatus() {
   drawVar(position + nextLine, "Light 2", value2.c_str());
 }
 
+
+void InfoDisplay::drawSceneDistanceSensorStatus() {
+  if(DistanceSensor == nullptr) return;
+  
+  Device.setColorIndex(1);
+  String distance = String(DistanceSensor->distance);
+  String duration = String(DistanceSensor->duration);
+  Point position = {2, Height - fullLineHeight};
+  Point nextLine = {0, fullLineHeight};
+  drawVar(position,            "Duration", duration.c_str(), "us");
+  drawVar(position + nextLine, "Distance", distance.c_str(), "cm");
+}
+
 void InfoDisplay::drawSceneMotorDriverStatus() {
   if(MotorDriver == nullptr) return;
   
   Device.setColorIndex(1);
-  String direction = String(MotorDriver->direction);
+  String direction = String(DIRECTION_STR[MotorDriver->direction]);
   String speed = String(MotorDriver->speed);
   Point position = {2, Height - fullLineHeight};
   Point nextLine = {0, fullLineHeight};
   drawVar(position, "Direction", direction.c_str());
-  drawVar(position + nextLine, "Speed", speed.c_str());
+  drawVar(position + nextLine, "Speed", speed.c_str(), "%");
 }
 
 void InfoDisplay::drawScenePoweredOnStats() {
@@ -88,8 +104,8 @@ void InfoDisplay::drawScenePoweredOnStats() {
 
   // Random points  
   for(char i = 0; i < 16; i++) {
-    uint8_t x = randomInRange(0, Width);
-    uint8_t y = randomInRange(0, Height);
+    u8 x = randomInRange(0, Width);
+    u8 y = randomInRange(0, Height);
     Device.setColorIndex(x > 0 && y > 0 && x < Width && y < Height);
     Device.drawPixel(x, y);
   }
@@ -106,7 +122,7 @@ void InfoDisplay::drawScenePoweredOnStats() {
   // Text with border
   int32_t border = 2;
   Point powered = {2, Height/2 + lineHeight/2};
-  char* poweredText = "Powered";
+  const char* poweredText = "Powered";
   Point value = {Width/2+10, Height/2 + lineHeight/2};
   String valueText = String(millis()/1000);
   Device.setColorIndex(0);
@@ -120,11 +136,13 @@ void InfoDisplay::drawScenePoweredOnStats() {
   Device.print(" sec");
 }
 
-void InfoDisplay::drawVar(Point position, const char* name, const char* value) {
+void InfoDisplay::drawVar(Point position, const char* name, const char* value, const char* unit) {
   Device.setPrintPos(position.X, position.Y);
   Device.print(name);
   Device.print(": ");
   Device.print(value);
+  Device.print(" ");
+  Device.print(unit);
 }
 
 void InfoDisplay::drawText(Point position, const char* text) {
