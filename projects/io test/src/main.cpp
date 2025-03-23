@@ -11,20 +11,32 @@ LightSensorHwComponent LightSensor1(PIN_A0);
 LightSensorHwComponent LightSensor2(PIN_A1);
 LightSensorsData lightSensorsData={0,0};
 
-MotorDriverHwComponent MotorDriver({PIN_PB3, PIN_PB2, PIN_PD5}, {PIN_PB1, PIN_PB0, PIN_PD6}, 100, 50);
+MotorDriverHwComponent MotorDriver({PIN_PB3, PIN_PB7, PIN_PB5}, {PIN_PB1, PIN_PB0, PIN_PD6}, 100, 50);
 MotorDriverData motorDriverData={Stop,50};
 time driveChange = 0;
 bool increaseSpeed = true;
 
-pin SwitchesPins[6] = {PIN_PD4, PIN_PD4, PIN_PD4, PIN_PD7, PIN_A2, PIN_A3};
+pin SwitchesPins[6] = {PIN_A2, PIN_A2, PIN_A2, PIN_A2, PIN_A2, PIN_A3};
 SwitchesHwComponent Switches(SwitchesPins);
 SwitchesData switchData = {{false,false,false,false,false,false}};
 
-DistanceHwComponent DistanceSensor(PIN_PD2, PIN_PD3);
+DistanceHwComponent DistanceSensor(PIN_PD7, PIN_PD3);
 DistanceSensorsData distanceSensorsData={0,0};
 bool distanceChanged = false;
 
-const u8 ComponentsLen = 7;
+RFReceiver RfReceiver(PIN_PD4, PIN_PD2);
+RFTransmitter RfTransmitter(PIN_PB2);
+RFData RfData = {
+  "RF Test\x03",
+  "",
+  7,
+  0,
+  0
+};
+const u8 charLenght = 8;
+bool rfChanged = false;
+
+const u8 ComponentsLen = 9;
 HwComponent* Components[ComponentsLen] = {
   &Laser,
   &Display,
@@ -33,6 +45,8 @@ HwComponent* Components[ComponentsLen] = {
   &MotorDriver,
   &Switches,
   &DistanceSensor,
+  &RfReceiver,
+  &RfTransmitter,
 };
 
 // put your setup code here, to run once
@@ -49,6 +63,7 @@ void setup() {
   Display.MotorDriver = &motorDriverData;
   Display.Switch = &switchData;
   Display.DistanceSensor = &distanceSensorsData;
+  Display.RfData = &RfData;
 
   Serial.flush();
 }
@@ -72,6 +87,8 @@ void laserReceive() {
 }
 
 void distanceMeasure() {
+  if(!Switches[3].State) return;
+
   double distance = 0, m = 0;
   time duration = 0;
   
@@ -127,6 +144,24 @@ void motorDrive() {
   }
 }
 
+void rfTransmit() {
+  Teleplot.sendUInt("RfTx", RfData.transmitted);
+  RfTransmitter.transmit(RfData.transmitBuff[RfData.transmitted], charLenght);
+  RfData.transmitted++;
+  if(RfData.transmitted > RfData.transmitLenght) RfData.transmitted = 0;
+  rfChanged = true;
+}
+
+void rfReceive() {
+  u8 lenght = RfReceiver.receive(RfData.receiveBuff[RfData.received]);
+  if(lenght > 0) {
+    Teleplot.sendUInt("RfRx", RfData.received);
+    if(RfData.receiveBuff[RfData.received] == '\x03' || RfData.received >= 9) RfData.received = 0;
+    else RfData.received++;
+    rfChanged = true;
+  }
+}
+
 void displayUpdate() {
   bool canSceneChange = now - lastSceneChange > 2'000'000;
   Teleplot.sendInt("LSC", now - lastSceneChange);
@@ -149,6 +184,10 @@ void displayUpdate() {
     else if(distanceChanged) {
       Display.Scene = DistanceSensorStatus;
       distanceChanged = false;
+    }
+    else if(rfChanged) {
+      Display.Scene = RFStatus;
+      rfChanged = false;
     }
     else {
       Display.Scene = PoweredOnStats;
@@ -181,9 +220,11 @@ Task tasks[] = {
   {0, 500'000, &laserTransmit},
   {0, 20'000, &motorDrive},
   {0, 10'000, &displayUpdate},
+  {0, 5'000, &rfReceive},
+  {0, 100'000, &rfTransmit},
 };
 
-u8 task_len = 5;
+u8 task_len = 7;
 Task* task;
 
 void loop() {

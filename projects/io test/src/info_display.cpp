@@ -18,6 +18,7 @@ void InfoDisplay::init() {
   Device.setFont(u8g_font_timB12);
   lineHeight = Device.getFontAscent();
   fullLineHeight = Device.getFontLineSpacing();
+  charWidth = Device.getStrPixelWidth("_");
 }
 
 void InfoDisplay::afterDraw() {
@@ -44,6 +45,9 @@ void InfoDisplay::drawContent() {
       break;
     case SwitchesStatus:
       drawSceneSwitchStatus();
+      break;
+    case RFStatus:
+      drawSceneRFStats();
       break;
   }
 }
@@ -83,6 +87,22 @@ void InfoDisplay::drawSceneDistanceSensorStatus() {
   Point nextLine = {0, fullLineHeight};
   drawVar(position,            "Duration", duration.c_str(), "us");
   drawVar(position + nextLine, "Distance", distance.c_str(), "cm");
+}
+
+void InfoDisplay::drawSceneRFStats() {
+  if(RfData == nullptr) return;
+  
+  memcpy(transmitted, RfData->transmitBuff, RfData->transmitted);
+  for(u8 i = RfData->transmitted; i < 10; i++) transmitted[i] = 0;
+  
+  memcpy(received, RfData->receiveBuff, RfData->received);
+  for(u8 i = RfData->received; i < 10; i++) received[i] = 0;
+  
+  Device.setColorIndex(1);
+  Point position = {2, Height - fullLineHeight};
+  Point nextLine = {0, fullLineHeight};
+  drawVar(position,            "RF TX", (const char*)transmitted);
+  drawVar(position + nextLine, "RF RX", (const char*)received);
 }
 
 void InfoDisplay::drawSceneMotorDriverStatus() {

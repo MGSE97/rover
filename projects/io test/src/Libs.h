@@ -8,5 +8,7 @@
 #include "Components/LightSensorComponent/LightSensorComponent.h"
 #include "Components/MotorDriverComponent/MotorDriverComponent.h"
 #include "Components/SwitchesComponent/SwitchesComponent.h"
+#include "Components/RFReceiverComponent/RFReceiverComponent.h"
+#include "Components/RFTransmitterComponent/RFTransmitterComponent.h"
 
 #endif
