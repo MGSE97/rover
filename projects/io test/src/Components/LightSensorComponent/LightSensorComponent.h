@@ -10,7 +10,6 @@ class LightSensorHwComponent : public HwComponent
     pin Pin;
 
     LightSensorHwComponent(pin pin);
-    ~LightSensorHwComponent();
 
     void init();
     u16 receive();

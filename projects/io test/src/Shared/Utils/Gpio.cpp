@@ -16,5 +16,5 @@ void fastDigitalWrite(PinDefinition& pin, u8 value) {
 
 
 u8 fastDigitalRead(PinDefinition& pin) {
-  return *pin.InputReg & pin.BitMask;
+  return (*pin.InputReg & pin.BitMask) ? HIGH : LOW;
 }

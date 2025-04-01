@@ -30,3 +30,26 @@ RESET | PC6 ---> ║ [◼] RST  ┌─┐ ┌─┐ ┌─┐ ┌─┐  RST [�
                              ↑
                             PB5 | LED_BUILTIN
 ```
+
+## Sensors
+
+- Light
+  - ADC: A7, A6
+- Laser
+  - D12
+- RF receiver
+  - INT: D2
+  - D4
+- RF transmitter
+  - D5
+- Motor
+  - PWM: D10, D9
+  - D12, D11
+  - D8, D7
+- Display:
+  - I2C: PC4, PC5
+- Distance:
+  - A0, A1
+  - A0, A2
+- Switches:
+- Free: D13 (LED), A3, D6, D3 (INT)

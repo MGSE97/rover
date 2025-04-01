@@ -28,7 +28,7 @@ bool DistanceHwComponent::measure(double& distance_cm, time& duration_us) {
   duration_us = pulseIn(Echo, HIGH, 1'000);
   
   // Signal travels to obstacle and back
-  distance_cm = SPEED_OF_SOUND_CM_US * duration_us / 2.0;
+  distance_cm = SPEED_OF_SOUND_MM_US * duration_us / 2.0;
   
   return duration_us > 0;
 }

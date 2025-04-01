@@ -1,3 +1,3 @@
 #include "Constants.h"
 
-const double SPEED_OF_SOUND_CM_US = 0.034;
+const double SPEED_OF_SOUND_MM_US = 0.34;

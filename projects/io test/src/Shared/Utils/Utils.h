@@ -7,5 +7,6 @@
 #include "Types.h"
 #include "Adc.h"
 #include "Gpio.h"
+#include "Point.hpp"
 
 #endif

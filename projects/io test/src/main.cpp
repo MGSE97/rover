@@ -7,8 +7,8 @@ time lastSceneChange = 0;
 LaserHwComponent Laser(PIN_PB4);
 time emitChange = 0;
 
-LightSensorHwComponent LightSensor1(PIN_A0);
-LightSensorHwComponent LightSensor2(PIN_A1);
+LightSensorHwComponent LightSensor1(PIN_A6);
+LightSensorHwComponent LightSensor2(PIN_A7);
 LightSensorsData lightSensorsData={0,0};
 
 MotorDriverHwComponent MotorDriver({PIN_PB3, PIN_PB7, PIN_PB5}, {PIN_PB1, PIN_PB0, PIN_PD6}, 100, 50);
@@ -17,10 +17,10 @@ time driveChange = 0;
 bool increaseSpeed = true;
 
 pin SwitchesPins[6] = {PIN_A2, PIN_A2, PIN_A2, PIN_A2, PIN_A2, PIN_A3};
-SwitchesHwComponent Switches(SwitchesPins);
+SwitchesHwComponent Switches(PIN_A1, PIN_A3, PIN_A2);
 SwitchesData switchData = {{false,false,false,false,false,false}};
 
-DistanceHwComponent DistanceSensor(PIN_PD7, PIN_PD3);
+Distance2DHwComponent DistanceSensor(PIN_PD7, PIN_PD3, PIN_A0);
 DistanceSensorsData distanceSensorsData={0,0};
 bool distanceChanged = false;
 
@@ -71,7 +71,7 @@ void setup() {
 time now;
 
 void laserTransmit() {
-  if(Switches[4].State) {
+  if(Switches[4]) {
     Laser.emitToggle();
   } else {
     Laser.emit(LOW);
@@ -87,9 +87,10 @@ void laserReceive() {
 }
 
 void distanceMeasure() {
-  if(!Switches[3].State) return;
+  //if(!Switches[3]) return;
 
-  double distance = 0, m = 0;
+  // 1D
+  /*double distance = 0, m = 0;
   time duration = 0;
   
   distanceSensorsData.distance = 0;
@@ -111,11 +112,27 @@ void distanceMeasure() {
   }
   Teleplot.sendInt("Dur", distanceSensorsData.duration);
   Teleplot.sendDouble("Dst", distanceSensorsData.distance);
-  Teleplot.sendInt("M", (int)m);
+  Teleplot.sendInt("M", (int)m);*/
+
+  // 2D
+  Serial.printf(">sens:0:0;55:0|xy\n");
+
+  Point obj[10];
+  u8 i = 0;
+  time started = micros();
+  do {
+    if(DistanceSensor.measure(obj[i])) i++;
+  } while(i < 10 && micros() - started < 100'000);
+  
+  for(u8 j = 0; j < i; j++) {  
+    if(j == 0) Serial.printf(">obj:%ld:%ld", obj[j].X, obj[j].Y);
+    else Serial.printf(";%ld:%ld", obj[j].X, obj[j].Y);
+  }
+  Serial.printf("|xy\n");
 }
 
 void motorDrive() {
-  if(Switches[5].State) {
+  if(Switches[5]) {
     if(motorDriverData.speed == 0) {
       switch(motorDriverData.direction) {
         case Stop:
@@ -198,7 +215,7 @@ void displayUpdate() {
   {
     case SwitchesStatus:
       for(u8 i = 0; i < 6; i++){
-        switchData.values[i] = Switches[i].State;
+        switchData.values[i] = Switches[i];
       }
       break;
     default:
