@@ -64,7 +64,7 @@ bool Distance2DHwComponent::measure(Point &position) {
 
   } while(MeasureEnded - MeasureStarted < DistanceTimeout && (!dLeft || !dRight));
   
-  if(!dLeft || !dRight) return false;// || Left > DistanceTimeout || Right > DistanceTimeout) return false;
+  if(!dLeft || !dRight || Left > DistanceTimeout || Right > DistanceTimeout) return false;
 
   // Signal travels to obstacle and back
   double distance_left = SPEED_OF_SOUND_MM_US * Left / 2.0;
@@ -78,5 +78,5 @@ bool Distance2DHwComponent::measure(Point &position) {
   position.X = (int)round(a);
   position.Y = (int)round(h);
   
-  return true;
+  return !(position.Y == 0 && position.X >= 0 && position.X <= Distance);
 }

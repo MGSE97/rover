@@ -9,6 +9,7 @@ class RFReceiver: public HwComponent
   public:
     pin Enable;
     pin Data;
+    bool Enabled;
 
     RFReceiver(pin enable, pin data);
     ~RFReceiver();
@@ -19,7 +20,6 @@ class RFReceiver: public HwComponent
 
   protected:
     RCSwitch Receiver;
-    bool Enabled;
 };
 
 #endif

@@ -17,14 +17,14 @@ void RFReceiver::init() {
 
 void RFReceiver::enable() {
   Enabled = true;
-  Receiver.enableReceive(digitalPinToInterrupt(Data));
   digitalWrite(Enable, HIGH);
+  Receiver.enableReceive(digitalPinToInterrupt(Data));
 }
 
 void RFReceiver::disable() {
   Enabled = false;
-  Receiver.disableReceive();
   digitalWrite(Enable, LOW);
+  Receiver.disableReceive();
 }
 
 u8 RFReceiver::receive(u8& value) {

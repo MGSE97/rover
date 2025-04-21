@@ -6,27 +6,28 @@
 InfoDisplay Display(10, U8G_I2C_OPT_FAST);
 time lastSceneChange = 0;
 
-LaserHwComponent Laser(PIN_A0);
+LaserHwComponent Laser(PIN_PB4);
 time emitChange = 0;
 
 LightSensorHwComponent LightSensor1(PIN_A6);
+LightSensorHwComponent LightSensor2(PIN_A7);
 LightSensorsData lightSensorsData={0,0};
 
-MotorDriverHwComponent MotorDriver({PIN_PB2, PIN_PB4, PIN_PB3}, {PIN_PB1, PIN_PD7, PIN_PB0}, 100, 50);
+MotorDriverHwComponent MotorDriver({PIN_PB3, PIN_PB7, PIN_PB5}, {PIN_PB1, PIN_PB0, PIN_PD6}, 100, 50);
 MotorDriverData motorDriverData={Stop,50};
 time driveChange = 0;
 bool increaseSpeed = true;
 
-pin SwitchesPins[6] = {PIN_PB5, PIN_A1, PIN_A2, PIN_A3, PIN_A3, PIN_A3};
-SwitchesHwComponentDirect Switches(SwitchesPins);
+pin SwitchesPins[6] = {PIN_A2, PIN_A2, PIN_A2, PIN_A2, PIN_A2, PIN_A3};
+SwitchesHwComponent Switches(PIN_A1, PIN_A3, PIN_A2);
 SwitchesData switchData = {{false,false,false,false,false,false}};
 
-DistanceHwComponent DistanceSensor(PIN_PD6, PIN_PD2);
+Distance2DHwComponent DistanceSensor(PIN_PD7, PIN_PD3, PIN_A0);
 DistanceSensorsData distanceSensorsData={0,0};
 bool distanceChanged = false;
 
-RFReceiver RfReceiver(PIN_PD4, PIN_PD3);
-RFTransmitter RfTransmitter(PIN_PD5);
+RFReceiver RfReceiver(PIN_PD4, PIN_PD2);
+RFTransmitter RfTransmitter(PIN_PB2);
 RFData RfData = {
   "RF Test\x03",
   "",
@@ -37,11 +38,12 @@ RFData RfData = {
 const u8 charLenght = 8;
 bool rfChanged = false;
 
-const u8 ComponentsLen = 8;
+const u8 ComponentsLen = 9;
 HwComponent* Components[ComponentsLen] = {
   &Laser,
   &Display,
   &LightSensor1,
+  &LightSensor2,
   &MotorDriver,
   &Switches,
   &DistanceSensor,
@@ -71,7 +73,7 @@ void setup() {
 time now;
 
 void laserTransmit() {
-  if(Switches[1].State) {
+  if(Switches[4]) {
     Laser.emitToggle();
   } else {
     Laser.emit(LOW);
@@ -80,16 +82,17 @@ void laserTransmit() {
 
 void laserReceive() {
   lightSensorsData.value1 = LightSensor1.receive();
+  lightSensorsData.value2 = LightSensor2.receive();
 
   Teleplot.sendInt("LS1", lightSensorsData.value1);
   Teleplot.sendInt("LS2", lightSensorsData.value2);
 }
 
 void distanceMeasure() {
-  if(!Switches[2].State) return;
+  //if(!Switches[3]) return;
 
   // 1D
-  double distance = 0, m = 0;
+  /*double distance = 0, m = 0;
   time duration = 0;
   
   distanceSensorsData.distance = 0;
@@ -111,11 +114,27 @@ void distanceMeasure() {
   }
   Teleplot.sendInt("Dur", distanceSensorsData.duration);
   Teleplot.sendDouble("Dst", distanceSensorsData.distance);
-  Teleplot.sendInt("M", (int)m);
+  Teleplot.sendInt("M", (int)m);*/
+
+  // 2D
+  Serial.printf(">sens:0:0;55:0|xy\n");
+
+  Point obj[10];
+  u8 i = 0;
+  time started = micros();
+  do {
+    if(DistanceSensor.measure(obj[i])) i++;
+  } while(i < 10 && micros() - started < 100'000);
+  
+  for(u8 j = 0; j < i; j++) {  
+    if(j == 0) Serial.printf(">obj:%ld:%ld", obj[j].X, obj[j].Y);
+    else Serial.printf(";%ld:%ld", obj[j].X, obj[j].Y);
+  }
+  Serial.printf("|xy\n");
 }
 
 void motorDrive() {
-  if(Switches[3].State) {
+  if(Switches[5]) {
     if(motorDriverData.speed == 0) {
       switch(motorDriverData.direction) {
         case Stop:
@@ -198,7 +217,7 @@ void displayUpdate() {
   {
     case SwitchesStatus:
       for(u8 i = 0; i < 6; i++){
-        switchData.values[i] = Switches[i].State;
+        switchData.values[i] = Switches[i];
       }
       break;
     default:
