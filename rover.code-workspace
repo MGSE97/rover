@@ -1,0 +1,37 @@
+{
+  "folders": [
+    {
+      "name": "All files",
+      "path": "."
+    },
+    {
+      "name": "Controller - IO Test",
+      "path": "./projects/io_test/controller"
+    },
+    {
+      "name": "Controller - Communication",
+      "path": "./projects/communication/controller"
+    },
+    {
+      "name": "Controller - Driving",
+      "path": "./projects/drive/controller"
+    },
+    {
+      "name": "Rover - IO Test",
+      "path": "./projects/io_test/rover"
+    },
+    {
+      "name": "Rover - Communication",
+      "path": "./projects/communication/rover"
+    },
+    {
+      "name": "Rover - Driving",
+      "path": "./projects/drive/rover"
+    }
+  ],
+  "settings": {},
+  "extensions": {
+    "recommendations": ["platformio.platformio-ide"],
+    "unwantedRecommendations": ["ms-vscode.cpptools-extension-pack"]
+  }
+}
