@@ -12,7 +12,6 @@ RFReceiver::~RFReceiver() {}
 void RFReceiver::init() {
   pinMode(Enable, OUTPUT);
   pinMode(Data, INPUT);
-  
   enable();
 }
 
@@ -20,6 +19,7 @@ void RFReceiver::enable() {
   Enabled = true;
   digitalWrite(Enable, HIGH);
   Receiver.enableReceive(digitalPinToInterrupt(Data));
+  Receiver.resetAvailable();
 }
 
 void RFReceiver::disable() {
@@ -28,15 +28,30 @@ void RFReceiver::disable() {
   Receiver.disableReceive();
 }
 
-u8 RFReceiver::receive(u32& value) {
-  if(!Receiver.available()) return 0;
+void RFReceiver::reset() {
+  Receiver.resetAvailable();
+}
 
-  Teleplot.sendInt("Px", Receiver.getReceivedProtocol());
-  Teleplot.sendInt("Pe", Protocol); 
+u8 RFReceiver::receive(u32& value) {
+  // Clean up buffers
+  if(!Receiver.available()) {
+    Receiver.resetAvailable();
+  }
+  
+  // Wait for message
+  time started = micros();
+  while (!Receiver.available() && micros() - started < 10'000) {
+    delayMicroseconds(100);
+  };
+  
+  // Check and return message
+  Teleplot.sendUInt("Px", Receiver.getReceivedProtocol());
+  Teleplot.sendUInt("Pe", Protocol); 
   if(Receiver.getReceivedProtocol() == Protocol) {
     u8 length = Receiver.getReceivedBitlength();
     value = Receiver.getReceivedValue();
-    Teleplot.sendInt("Len", length); 
+    Teleplot.sendUInt("Len", length); 
+    Teleplot.sendUInt("Val", value); 
     
     Receiver.resetAvailable();
     return length;

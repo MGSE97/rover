@@ -4,7 +4,7 @@
 #include <clib/u8g.h>
 #include "lib/Libs.h"
 
-const u8 MSG_BUFF_LEN = 12;
+const u8 MSG_BUFF_LEN = 11;
 
 enum Scenes {
   RxTxMsg,

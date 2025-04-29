@@ -17,6 +17,7 @@ class RFReceiver: public HwComponent
     void init();
     void enable();
     void disable();
+    void reset();
     u8 receive(u32& value);
 
   protected:

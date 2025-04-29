@@ -1,11 +1,11 @@
 #include "info_display.h"
 
-const char* MESSAGE = "Controller\x03";
+const char* MESSAGE = "Controller";
 
 InfoDisplay Display(10, U8G_I2C_OPT_FAST);
 RxTxData rxTx = {
-  "           ",
-  "           ",
+  "          ",
+  "          ",
   0,
   0
 };
@@ -26,7 +26,7 @@ pin SwitchesPins[6] = {PIN_PD7, PIN_PB0, PIN_PB1, PIN_PB2, PIN_PB3, PIN_PB4};
 SwitchesHwComponentDirect Switches(SwitchesPins);
 
 RFReceiver RfReceiver(PIN_PD3, PIN_PD2, 3);
-RFTransmitter RfTransmitter(PIN_PD4, 2);
+RFTransmitter RfTransmitter(PIN_PD4, 3);
 
 const u8 ComponentsLen = 6;
 HwComponent* Components[ComponentsLen] = {
@@ -53,6 +53,13 @@ void setup() {
   Display.Rf = &rf;
   
   Serial.flush();
+}
+
+void displayUpdate() {
+  if(Display.shouldDraw()) {
+    Display.Scene = Switches[2].State ? Scenes::RxTxMsg : Switches[0].State ? Scenes::OpticsStats : Scenes::RfStats;
+    Display.draw();
+  }
 }
 
 void laserTransmit() {
@@ -97,91 +104,67 @@ void laserReceive() {
 
 void rfTransmit() {
   if(!Switches[1].State) return;
-
-  /*u8 len = 0;
-  u32 byte = encode_data(MESSAGE[rxTx.transmitted], 8, &len);
-  RfTransmitter.transmit(byte, len);*/
+  
   Message msg = {
     Device::Controller,
     rxTx.transmitted,
     (u8)MESSAGE[rxTx.transmitted],
   };
   Message decoded;
+
+  // Update display
+  rxTx.transmitBuff[rxTx.transmitted] = MESSAGE[rxTx.transmitted];
+  if(rxTx.transmitted++ > MSG_BUFF_LEN) rxTx.transmitted = 0;
+  displayUpdate();
+  
   u32 encoded = 0;
   u8 len = msg.encode(encoded);
   u32 ack = 0;
-  for(u8 i = 0; i < 10; i++) {
+  
+  time started = micros();
+  time ended = 0;
+  
+  Teleplot.sendUInt("Out-D", len);
+  Teleplot.sendUInt("Out-V", encoded);
+  Teleplot.sendUInt("Out-S", msg.sender);
+  Teleplot.sendUInt("Out-O", msg.order);
+  Teleplot.sendUInt("Out-L", msg.letter);
+  do {
+    Serial.flush();
     // Send data
+    Teleplot.sendUInt("Out", encoded);
     RfTransmitter.transmit(encoded, len);
+    RfReceiver.reset();
     
     // Wait for confirmation
-    delayMicroseconds(5000);
     u8 lenght = RfReceiver.receive(ack);
+    ended = micros();
+
     if(lenght == 0) ack = 0;
     else {
+      Teleplot.sendUInt("In-V", ack);
+      Teleplot.sendUInt("In-S", decoded.sender);
+      Teleplot.sendUInt("In-O", decoded.order);
+      Teleplot.sendUInt("In-L", decoded.letter);
+      // Validate received data, and stop loop if response is valid
       if(!decoded.decode(ack) || decoded.sender != Device::Rover) ack = 0;
       else if(decoded.letter == msg.letter && decoded.order == msg.order) break;
     }
-  };
-  
-  rxTx.transmitBuff[rxTx.transmitted] = MESSAGE[rxTx.transmitted];
-  if(rxTx.transmitted++ > MSG_BUFF_LEN) rxTx.transmitted = 0;
-}
+  } while(ended - started < 50'000);
 
-void rfReceive() {
-  /*if(Switches[1].State != RfReceiver.Enabled) {
-    Switches[1].State ? RfReceiver.enable() : RfReceiver.disable();
-    // We skip recieve, since component needs some time to receive datata
-    return;
-  }*/
-
-  time start = micros();
-  u8 lenght = 0;
-  u32 data = 0;
-  Message received;
-  for(u8 i = 0; i < 10; i++) {
-    // Get data
-    lenght = RfReceiver.receive(data);
-    time end = micros();
-    if(lenght > 0 && received.decode(data) && received.sender == Device::Rover) {
-      //byte = decode_data(byte, lenght);
-
-      // 1 byte / duration = N bytes / 1 second
-      if(end - start > 0) rf.topSpeed = 1e6 / (end - start);
-      if(received.letter == '\x03') rxTx.received = 0;
-      else {
-        rxTx.receiveBuff[received.order] = isPrintable(received.letter) ? received.letter : '#';
-      }
-      
-      // Send confirmation
-      Message ack = {
-        Device::Controller,
-        received.order,
-        received.letter
-      };
-      u8 len = ack.encode(data);
-      RfTransmitter.transmit(data, len);
-      break;
-    }
-    delayMicroseconds(5000);
-  };
-}
-
-void displayUpdate() {
-  if(Display.shouldDraw()) {
-    Display.Scene = Switches[2].State ? Scenes::RxTxMsg : Switches[0].State ? Scenes::OpticsStats : Scenes::RfStats;
-    Display.draw();
-  }
+  // Update display
+  delayMicroseconds(5000);
+  if(ended - started > 0) rf.topSpeed = 1e6 / (ended - started);
+  displayUpdate();
 }
 
 Task tasks[] = {
   {100'000, &laserReceive},
   {100'000, &laserTransmit},
-  {5'000, &rfReceive},
   {100'000, &rfTransmit},
-  {10'000, &displayUpdate},
+  //{10'000, &displayUpdate},
 };
-TaskQueue scheduler(5, tasks);
+TaskQueue scheduler(3, tasks);
 
 void loop() {
   Switches.update();
