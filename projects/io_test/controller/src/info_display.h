@@ -2,7 +2,7 @@
 #define INFO_DISPLAY_H
 
 #include <clib/u8g.h>
-#include "../../lib/Lib.h"
+#include "lib/Libs.h"
 
 enum Scenes {
   PoweredOnStats, 
@@ -33,8 +33,8 @@ struct MotorDriverData {
 };
 
 struct RFData {
-  u8 transmitBuff[10];
-  u8 receiveBuff[10];
+  u32 transmitBuff[10];
+  u32 receiveBuff[10];
 
   u8 transmitLenght;
   u8 transmitted;

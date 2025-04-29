@@ -1,9 +1,10 @@
 #include "RFReceiverComponent.h"
 
-RFReceiver::RFReceiver(pin enable, pin data) {
+RFReceiver::RFReceiver(pin enable, pin data, u8 protocol) {
   Data = data;
   Enable = enable;
   Receiver = RCSwitch();
+  Protocol = protocol;
 }
 
 RFReceiver::~RFReceiver() {}
@@ -27,12 +28,20 @@ void RFReceiver::disable() {
   Receiver.disableReceive();
 }
 
-u8 RFReceiver::receive(u8& value) {
+u8 RFReceiver::receive(u32& value) {
   if(!Receiver.available()) return 0;
 
-  u8 length = Receiver.getReceivedBitlength();
-  value = Receiver.getReceivedValue();
+  Teleplot.sendInt("Px", Receiver.getReceivedProtocol());
+  Teleplot.sendInt("Pe", Protocol); 
+  if(Receiver.getReceivedProtocol() == Protocol) {
+    u8 length = Receiver.getReceivedBitlength();
+    value = Receiver.getReceivedValue();
+    Teleplot.sendInt("Len", length); 
+    
+    Receiver.resetAvailable();
+    return length;
+  }
 
   Receiver.resetAvailable();
-  return length;
+  return 0;
 }

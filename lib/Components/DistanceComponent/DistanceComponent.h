@@ -2,7 +2,7 @@
 #define LIB_DISTANCE_COMPONENT
 
 #include <Arduino.h>
-#include "Shared/Shared.h"
+#include "../../Shared/Shared.h"
 
 class DistanceHwComponent : public HwComponent
 {

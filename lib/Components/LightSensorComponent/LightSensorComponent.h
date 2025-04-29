@@ -2,7 +2,7 @@
 #define LIB_LIGHT_SENSOR_COMPONENT
 
 #include <Arduino.h>
-#include "Shared/Shared.h"
+#include "../../Shared/Shared.h"
 
 class LightSensorHwComponent : public HwComponent
 {

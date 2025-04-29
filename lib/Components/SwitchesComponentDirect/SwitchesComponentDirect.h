@@ -2,7 +2,7 @@
 #define LIB_SWITCHES_COMPONENT_DIRECT
 
 #include <Arduino.h>
-#include "Shared/Shared.h"
+#include "../../Shared/Shared.h"
 
 struct Switch {
   PinDefinition Pin;

@@ -2,53 +2,42 @@
 #define INFO_DISPLAY_H
 
 #include <clib/u8g.h>
-#include "../../lib/Lib.h"
+#include "lib/Libs.h"
+
+const u8 MSG_BUFF_LEN = 12;
 
 enum Scenes {
-  PoweredOnStats, 
-  LightSensorStatus,
-  MotorDriverStatus,
-  SwitchesStatus,
-  DistanceSensorStatus,
-  RFStatus,
+  RxTxMsg,
+  RfStats,
+  OpticsStats
 };
 
-struct LightSensorsData {
-  u16 value1;
-  u16 value2;
+enum Method {
+  RF,
+  Optics
 };
 
-struct DistanceSensorsData {
-  double distance;
-  time duration;
-};
+extern const char* METHOD_STR[];
 
-struct SwitchesData {
-  bool values[6];
-};
 
-struct MotorDriverData {
-  Direction direction;
-  u8 speed;
-};
-
-struct RFData {
-  u8 transmitBuff[10];
-  u8 receiveBuff[10];
-
-  u8 transmitLenght;
+struct RxTxData {
+  u8 transmitBuff[MSG_BUFF_LEN];
+  u8 receiveBuff[MSG_BUFF_LEN];
   u8 transmitted;
   u8 received;
+};
+
+struct StatsData {
+  Method method;
+  u32 topSpeed;
 };
 
 class InfoDisplay: public DisplayHwComponent {
   public:
     Scenes Scene;
-    LightSensorsData* LightSensors;
-    MotorDriverData* MotorDriver;
-    SwitchesData* Switch;
-    DistanceSensorsData* DistanceSensor;
-    RFData* RfData;
+    RxTxData* RxTx;
+    StatsData* Rf;
+    StatsData* Optics;
 
     inline InfoDisplay(u8 refresh_ms = 25, u8 i2c_options = U8G_I2C_OPT_FAST)
       : DisplayHwComponent(refresh_ms, i2c_options) {}
@@ -66,18 +55,17 @@ class InfoDisplay: public DisplayHwComponent {
     u8 fullLineHeight = 0;
     u8 charWidth = 0;
 
-    u8 transmitted[10];
-    u8 received[10];
+    u8 transmitted[MSG_BUFF_LEN];
+    u8 received[MSG_BUFF_LEN];
     
-    void drawSceneSwitchStatus();
-    void drawSceneLightSensorStatus();
-    void drawSceneMotorDriverStatus();
-    void drawSceneDistanceSensorStatus();
-    void drawSceneRFStats();
-    void drawScenePoweredOnStats();
+    void drawSceneRxTxMsg();
+    void drawSceneRfStats();
+    void drawSceneOpticsStats();
 
     void drawVar(Point position, const char* name, const char* value, const char* unit = "");
     void drawText(Point position, const char* text);
+    
+    void clear();
 };
 
 #endif

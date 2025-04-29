@@ -2,7 +2,7 @@
 #define LIB_MOTOR_DRIVER_COMPONENT
 
 #include <Arduino.h>
-#include "Shared/Shared.h"
+#include "../../Shared/Shared.h"
 
 struct MotorPins
 {

@@ -1,8 +1,9 @@
 #include "RFTransmitterComponent.h"
 
-RFTransmitter::RFTransmitter(pin data) {
+RFTransmitter::RFTransmitter(pin data, u8 protocol) {
   Data = data;
   Transmitter = RCSwitch();
+  Transmitter.setProtocol(protocol);
 }
 
 RFTransmitter::~RFTransmitter() {}

@@ -29,9 +29,10 @@ RFData RfData = {
 const u8 charLenght = 8;
 bool rfChanged = false;
 
-const u8 ComponentsLen = 5;
+const u8 ComponentsLen = 6;
 HwComponent* Components[ComponentsLen] = {
   &Laser,
+  &LightSensor,
   &Display,
   &Switches,
   &RfReceiver,
@@ -136,13 +137,13 @@ void displayUpdate() {
   Display.draw();
 }
 
-struct Task {
+struct OTask {
   time lastRun;
   time delay;
   void (*run)();
 };
 
-Task tasks[] = {
+OTask tasks[] = {
   {0, 50'000, &laserReceive},
   {0, 500'000, &laserTransmit},
   {0, 10'000, &displayUpdate},
@@ -151,7 +152,7 @@ Task tasks[] = {
 };
 
 u8 task_len = 5;
-Task* task;
+OTask* task;
 
 void loop() {
   now = micros();

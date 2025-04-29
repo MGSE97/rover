@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 #include <U8glib-HAL.h>
-#include "Shared/Shared.h"
+#include "../../Shared/Shared.h"
 
 
 class DisplayHwComponent: public HwComponent 

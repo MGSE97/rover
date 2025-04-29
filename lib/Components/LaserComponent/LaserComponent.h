@@ -2,7 +2,7 @@
 #define LIB_LASER_COMPONENT
 
 #include <Arduino.h>
-#include "Shared/Shared.h"
+#include "../../Shared/Shared.h"
 
 class LaserHwComponent : public HwComponent
 {

@@ -2,7 +2,7 @@
 #define LIB_RFR_COMPONENT
 
 #include <RCSwitch.h>
-#include "Shared/Shared.h"
+#include "../../Shared/Shared.h"
 
 class RFReceiver: public HwComponent 
 {
@@ -10,13 +10,14 @@ class RFReceiver: public HwComponent
     pin Enable;
     pin Data;
     bool Enabled;
+    u8 Protocol;
 
-    RFReceiver(pin enable, pin data);
+    RFReceiver(pin enable, pin data, u8 protocol = 1);
     ~RFReceiver();
     void init();
     void enable();
     void disable();
-    u8 receive(u8& value);
+    u8 receive(u32& value);
 
   protected:
     RCSwitch Receiver;

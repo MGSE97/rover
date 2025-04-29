@@ -2,7 +2,7 @@
 #define LIB_SWITCHES_COMPONENT
 
 #include <Arduino.h>
-#include "Shared/Shared.h"
+#include "../../Shared/Shared.h"
 
 class SwitchesHwComponent : public HwComponent
 {
