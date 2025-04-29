@@ -122,7 +122,6 @@ void rfTransmitBasic() {
     // Send data
     Teleplot.sendUInt("Out", encoded);
     RfTransmitter.transmit(encoded, 8);
-    RfReceiver.reset();
     
     // Wait for confirmation
     u8 lenght = RfReceiver.receive(ack);
@@ -140,10 +139,13 @@ void rfTransmitBasic() {
         break;
       }
     }
-  } while((ended - started) < 50'000);
+  } while((ended - started) < 100'000);
 
   // Update display
-  if(ack == 0 && (encoded == '\x03' || ++rxTx.received > MSG_BUFF_LEN)) rxTx.received = 0;
+  if(ack == 0) {
+    rxTx.receiveBuff[rxTx.received] = '_';
+    if(encoded == '\x03' || ++rxTx.received > MSG_BUFF_LEN) rxTx.received = 0;
+  } 
   delayMicroseconds(5000);
   if(ended - started > 0) rf.topSpeed = 1e6 / (ended - started);
   displayUpdate();
