@@ -34,13 +34,13 @@ void RFReceiver::reset() {
 
 u8 RFReceiver::receive(u32& value) {
   // Clean up buffers
-  if(!Receiver.available()) {
+  if(Receiver.available()) {
     Receiver.resetAvailable();
   }
   
   // Wait for message
   time started = micros();
-  while (!Receiver.available() || (micros() - started) < 10'000) {
+  while (!Receiver.available() && (micros() - started) < 10'000) {
     delayMicroseconds(100);
   };
   
