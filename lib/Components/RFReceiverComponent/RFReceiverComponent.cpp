@@ -40,7 +40,7 @@ u8 RFReceiver::receive(u32& value) {
   
   // Wait for message
   time started = micros();
-  while (!Receiver.available() && micros() - started < 10'000) {
+  while (!Receiver.available() || (micros() - started) < 10'000) {
     delayMicroseconds(100);
   };
   

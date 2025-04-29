@@ -36,10 +36,10 @@ void InfoDisplay::drawSceneRxTxMsg() {
   
   // Clean up buffers
   memcpy(transmitted, RxTx->transmitBuff, RxTx->transmitted);
-  for(u8 i = RxTx->transmitted; i < 10; i++) transmitted[i] = 0;
+  for(u8 i = RxTx->transmitted; i < MSG_BUFF_LEN; i++) transmitted[i] = '\0';
   
   memcpy(received, RxTx->receiveBuff, RxTx->received);
-  for(u8 i = RxTx->received; i < 10; i++) received[i] = 0;
+  for(u8 i = RxTx->received; i < MSG_BUFF_LEN; i++) received[i] = '\0';
   
   // Draw data
   clear();

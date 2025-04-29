@@ -1,11 +1,11 @@
 #include "info_display.h"
 
-const char* MESSAGE = "Controller";
+const char* MESSAGE = "Controller\x03";
 
 InfoDisplay Display(10, U8G_I2C_OPT_FAST);
 RxTxData rxTx = {
-  "          ",
-  "          ",
+  "           ",
+  "           ",
   0,
   0
 };
@@ -25,8 +25,8 @@ LightSensorHwComponent LightSensor(PIN_A7);
 pin SwitchesPins[6] = {PIN_PD7, PIN_PB0, PIN_PB1, PIN_PB2, PIN_PB3, PIN_PB4};
 SwitchesHwComponentDirect Switches(SwitchesPins);
 
-RFReceiver RfReceiver(PIN_PD3, PIN_PD2, 3);
-RFTransmitter RfTransmitter(PIN_PD4, 3);
+RFReceiver RfReceiver(PIN_PD3, PIN_PD2, 1);
+RFTransmitter RfTransmitter(PIN_PD4, 1);
 
 const u8 ComponentsLen = 6;
 HwComponent* Components[ComponentsLen] = {
@@ -73,7 +73,7 @@ void laserTransmit() {
     delayMicroseconds(1000);
   }
   rxTx.transmitBuff[rxTx.transmitted] = MESSAGE[rxTx.transmitted];
-  if(rxTx.transmitted++ > MSG_BUFF_LEN) rxTx.transmitted = 0;
+  if(++rxTx.transmitted > MSG_BUFF_LEN) rxTx.transmitted = 0;
   
   Laser.emit(LOW);
 }
@@ -97,12 +97,58 @@ void laserReceive() {
     if(byte == '\x03') rxTx.received = 0;
     else {
       rxTx.receiveBuff[rxTx.received] = isPrintable(byte) ? byte : '#';
-      if(rxTx.received++ > MSG_BUFF_LEN) rxTx.received = 0;
+      if(++rxTx.received > MSG_BUFF_LEN) rxTx.received = 0;
     }
   }
 }
 
-void rfTransmit() {
+void rfTransmitBasic() {
+  if(!Switches[1].State) return;
+  
+  u8 encoded = MESSAGE[rxTx.transmitted];
+
+  // Update display
+  rxTx.transmitBuff[rxTx.transmitted] = MESSAGE[rxTx.transmitted];
+  if(encoded == '\x03' || ++rxTx.transmitted > MSG_BUFF_LEN) rxTx.transmitted = 0;
+  displayUpdate();
+  
+  u32 ack = 0;
+  
+  time started = micros();
+  time ended = 0;
+  
+  do {
+    Serial.flush();
+    // Send data
+    Teleplot.sendUInt("Out", encoded);
+    RfTransmitter.transmit(encoded, 8);
+    RfReceiver.reset();
+    
+    // Wait for confirmation
+    u8 lenght = RfReceiver.receive(ack);
+    ended = micros();
+
+    Teleplot.sendUInt("In-L", lenght);
+    if(lenght != 8) ack = 0;
+    else {
+      Teleplot.sendUInt("In-V", ack);
+      // Validate received data, and stop loop if response is valid
+      if(ack != encoded) ack = 0;
+      else {      
+        rxTx.receiveBuff[rxTx.received] = isPrintable(ack) ? ack : '#';
+        if(encoded == '\x03' || ++rxTx.received > MSG_BUFF_LEN) rxTx.received = 0;
+        break;
+      }
+    }
+  } while(ended - started < 50'000);
+
+  // Update display
+  delayMicroseconds(5000);
+  if(ended - started > 0) rf.topSpeed = 1e6 / (ended - started);
+  displayUpdate();
+}
+
+void rfTransmitBetter() {
   if(!Switches[1].State) return;
   
   Message msg = {
@@ -114,7 +160,7 @@ void rfTransmit() {
 
   // Update display
   rxTx.transmitBuff[rxTx.transmitted] = MESSAGE[rxTx.transmitted];
-  if(rxTx.transmitted++ > MSG_BUFF_LEN) rxTx.transmitted = 0;
+  if(++rxTx.transmitted > MSG_BUFF_LEN) rxTx.transmitted = 0;
   displayUpdate();
   
   u32 encoded = 0;
@@ -161,7 +207,8 @@ void rfTransmit() {
 Task tasks[] = {
   {100'000, &laserReceive},
   {100'000, &laserTransmit},
-  {100'000, &rfTransmit},
+  {100'000, &rfTransmitBasic},
+  //{100'000, &rfTransmitBetter},
   //{10'000, &displayUpdate},
 };
 TaskQueue scheduler(3, tasks);
