@@ -18,15 +18,12 @@ extern const char* INSTRUCTION_STR[];
 struct Instruction
 {
   public:
-    Device device;
-    u8 order;
     InstructionType type;
-    u8* data;
-    u8 len;
+    u8 data;
 
-    bool decode(u8* encoded, u8 encoded_len);
+    bool decode(u32 encoded);
 
-    u8 encode(u8* result);
+    u8 encode(u32& result);
 };
 
 
