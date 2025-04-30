@@ -25,7 +25,7 @@ bool DistanceHwComponent::measure(double& distance_cm, time& duration_us) {
   fastDigitalWrite(Trigger, LOW);
 
   // Measure pulse from sensor
-  duration_us = pulseIn(Echo, HIGH, 2'000);
+  duration_us = pulseIn(Echo, HIGH, 5'000);
   
   // Signal travels to obstacle and back
   distance_cm = SPEED_OF_SOUND_MM_US * duration_us / 2.0;
