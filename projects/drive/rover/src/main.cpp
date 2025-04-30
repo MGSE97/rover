@@ -26,6 +26,7 @@ SwitchesHwComponentDirect Switches(SwitchesPins);
 RFReceiver RfReceiver(PIN_PD4, PIN_PD3, 1);
 RFTransmitter RfTransmitter(PIN_PD5, 1);
 
+u8 INISTRUCTION_DELAY_MULT = 10;
 MotorDriverHwComponent MotorDriver({PIN_PB2, PIN_PB4, PIN_PB3}, {PIN_PB0, PIN_PD7, PIN_PB1}, 1000, 10, 50);
 
 DistanceHwComponent DistanceSensor(PIN_PD6, PIN_PD2);
@@ -80,22 +81,38 @@ void processInstruction() {
       break;
     case InstructionType::RotateLeft:
       MotorDriver.drive(Direction::Left, 50);
-      delayMicroseconds(next.data);
+      delay(MotorDriver.StopTime);
+      MotorDriver.drive(Direction::Left, 50);
+      delay(MotorDriver.SpinTime);
+      MotorDriver.drive(Direction::Left, 50);
+      delay(next.data*INISTRUCTION_DELAY_MULT);
       MotorDriver.drive(Direction::Stop, 0);
       break;
     case InstructionType::RotateRight:
       MotorDriver.drive(Direction::Right, 50);
-      delayMicroseconds(next.data);
+      delay(MotorDriver.StopTime);
+      MotorDriver.drive(Direction::Right, 50);
+      delay(MotorDriver.SpinTime);
+      MotorDriver.drive(Direction::Right, 50);
+      delay(next.data*INISTRUCTION_DELAY_MULT);
       MotorDriver.drive(Direction::Stop, 0);
       break;
     case InstructionType::MoveBackward:
       MotorDriver.drive(Direction::Backward, 50);
-      delayMicroseconds(next.data);
+      delay(MotorDriver.StopTime);
+      MotorDriver.drive(Direction::Backward, 50);
+      delay(MotorDriver.SpinTime);
+      MotorDriver.drive(Direction::Backward, 50);
+      delay(next.data*INISTRUCTION_DELAY_MULT);
       MotorDriver.drive(Direction::Stop, 0);
       break;
     case InstructionType::MoveForward:
       MotorDriver.drive(Direction::Forward, 50);
-      delayMicroseconds(next.data);
+      delay(MotorDriver.StopTime);
+      MotorDriver.drive(Direction::Forward, 50);
+      delay(MotorDriver.SpinTime);
+      MotorDriver.drive(Direction::Forward, 50);
+      delay(next.data*INISTRUCTION_DELAY_MULT);
       MotorDriver.drive(Direction::Stop, 0);
       break;
     case InstructionType::ScanArea:
@@ -127,7 +144,7 @@ void laserReceive() {
     
     if(byte > 0 && next.decode(byte)) {
       memcpy(rxTx.receiveBuff, INSTRUCTION_STR[next.type], MSG_BUFF_LEN);
-      rxTx.received = sizeof(INSTRUCTION_STR[next.type]);
+      rxTx.received = MSG_BUFF_LEN;
       id++;
     }
   }
@@ -137,6 +154,7 @@ void laserReceive() {
   delayMicroseconds(10);
   Laser.emit(HIGH);
   delayMicroseconds(10);
+  Laser.emit(LOW);
   
   processInstruction();
 
@@ -144,7 +162,6 @@ void laserReceive() {
   // 1 byte / duration = N bytes / 1 second
   if(end - start > 0) optics.topSpeed = 1e6 / (end - start);
   
-  Laser.emit(LOW);
 }
 
 void rfReceive() {
@@ -167,7 +184,7 @@ void rfReceive() {
     Serial.printf("%d %d %d\n", id, next.type, next.data);
     // Update display data
     memcpy(rxTx.receiveBuff, INSTRUCTION_STR[next.type], MSG_BUFF_LEN);
-    rxTx.received = sizeof(INSTRUCTION_STR[next.type]);
+    rxTx.received = MSG_BUFF_LEN;
     id++;
       
     // Send confirmation
@@ -185,12 +202,40 @@ void rfReceive() {
   Serial.flush();
 }
 
+
+void distanceMeasure() {
+  if(!Switches[2].State) return;
+
+  // 1D
+  double distance = 0, m = 0;
+  double distance_sum = 0;
+  time duration = 0;
+  time duration_sum = 0;
+
+  // Do multiple measurements
+  for(u8 i = 0; i < 32; i++) {
+    if(DistanceSensor.measure(distance, duration)) {
+      distance_sum += distance;
+      duration_sum += duration;
+      m++;
+    }
+    delayMicroseconds(30);
+  }
+  if(m > 0) {
+    distance_sum /= m;
+    duration_sum /= m;
+  }
+  sprintf((char*)rxTx.transmitBuff, "%d mm", (int)distance_sum);
+  rxTx.transmitted = MSG_BUFF_LEN;
+}
+
 Task tasks[] = {
+  {10, &distanceMeasure},
   {10'000, &laserReceive},
   {10'000, &rfReceive},
   {10'000, &displayUpdate}
 };
-TaskQueue scheduler(3, tasks);
+TaskQueue scheduler(4, tasks);
 
 void loop() {
   Switches.update();
