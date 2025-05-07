@@ -1,6 +1,6 @@
-# Light communication
+# Rover
 
-Example of communication using light for ATmega328p boards.
+Example of communication and remote control for rover for ATmega328p boards.
 
 ## Schema
 
