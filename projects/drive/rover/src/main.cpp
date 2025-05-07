@@ -24,10 +24,13 @@ pin SwitchesPins[6] = {PIN_PB5, PIN_A1, PIN_A2, PIN_A3, PIN_A3, PIN_A3};
 SwitchesHwComponentDirect Switches(SwitchesPins);
 
 RFReceiver RfReceiver(PIN_PD4, PIN_PD3, 1);
-RFTransmitter RfTransmitter(PIN_PD5, 1);
+RFTransmitter RfTransmitter(PIN_PD5, 6);
 
-u8 INISTRUCTION_DELAY_MULT = 10;
-MotorDriverHwComponent MotorDriver({PIN_PB2, PIN_PB4, PIN_PB3}, {PIN_PB0, PIN_PD7, PIN_PB1}, 1000, 10, 50);
+u8 MAX_SPEED = 50;
+u8 SPIN_SPEED = 50;
+u8 ROTATE_SPEED = 50;
+u8 MOVEMENT_SPEED = 100;
+MotorDriverHwComponent MotorDriver({PIN_PB2, PIN_PB4, PIN_PB3}, {PIN_PB0, PIN_PD7, PIN_PB1}, 1000, 10, MAX_SPEED, SPIN_SPEED);
 
 DistanceHwComponent DistanceSensor(PIN_PD6, PIN_PD2);
 
@@ -61,12 +64,26 @@ void setup() {
 }
 
 void displayUpdate() {
-  if(Display.shouldDraw()) {  
+  if(Display.shouldDraw() && MotorDriver.TargetSpeed == 0) {  
     Display.Scene = Switches[3].State ? Scenes::RxTxMsg : Switches[1].State ? Scenes::OpticsStats : Scenes::RfStats;
+    // This takes a long time
     Display.draw();
   }
 }
 
+void motorUpdate() {
+  MotorDriver.update();
+}
+
+void drive(Direction direction, u8 speed, time duration) {
+  duration = map(duration, 0, 15, 10, 1000);
+  MotorDriver.drive(direction, speed, duration);
+
+  // ToDo: This should be "async", but other tasks are delaying it
+  while(MotorDriver.TargetSpeed != 0) motorUpdate();
+}
+
+Instruction ack = {InstructionType::Ack, 0};
 Instruction next;
 u8 id = 0;
 u8 last_id = 0;
@@ -77,43 +94,19 @@ void processInstruction() {
   switch (next.type)
   {
     case InstructionType::StopMovement:
-      MotorDriver.drive(Direction::Stop, 0);
+      MotorDriver.drive(Direction::Stop, 0, 0);
       break;
     case InstructionType::RotateLeft:
-      MotorDriver.drive(Direction::Left, 50);
-      delay(MotorDriver.StopTime);
-      MotorDriver.drive(Direction::Left, 50);
-      delay(MotorDriver.SpinTime);
-      MotorDriver.drive(Direction::Left, 50);
-      delay(next.data*INISTRUCTION_DELAY_MULT);
-      MotorDriver.drive(Direction::Stop, 0);
+      drive(Direction::Left, ROTATE_SPEED, next.data);
       break;
     case InstructionType::RotateRight:
-      MotorDriver.drive(Direction::Right, 50);
-      delay(MotorDriver.StopTime);
-      MotorDriver.drive(Direction::Right, 50);
-      delay(MotorDriver.SpinTime);
-      MotorDriver.drive(Direction::Right, 50);
-      delay(next.data*INISTRUCTION_DELAY_MULT);
-      MotorDriver.drive(Direction::Stop, 0);
+      drive(Direction::Right, ROTATE_SPEED, next.data);
       break;
     case InstructionType::MoveBackward:
-      MotorDriver.drive(Direction::Backward, 50);
-      delay(MotorDriver.StopTime);
-      MotorDriver.drive(Direction::Backward, 50);
-      delay(MotorDriver.SpinTime);
-      MotorDriver.drive(Direction::Backward, 50);
-      delay(next.data*INISTRUCTION_DELAY_MULT);
-      MotorDriver.drive(Direction::Stop, 0);
+      drive(Direction::Backward, MOVEMENT_SPEED, next.data);
       break;
     case InstructionType::MoveForward:
-      MotorDriver.drive(Direction::Forward, 50);
-      delay(MotorDriver.StopTime);
-      MotorDriver.drive(Direction::Forward, 50);
-      delay(MotorDriver.SpinTime);
-      MotorDriver.drive(Direction::Forward, 50);
-      delay(next.data*INISTRUCTION_DELAY_MULT);
-      MotorDriver.drive(Direction::Stop, 0);
+      drive(Direction::Forward, MOVEMENT_SPEED, next.data);
       break;
     case InstructionType::ScanArea:
       // ToDo
@@ -173,24 +166,21 @@ void rfReceive() {
 
   u8 lenght = 0;
   u32 data = 0;
-  
+
   // Receive data
   time started = micros();
   lenght = RfReceiver.receive(data);
 
-  Teleplot.sendUInt("In-D", lenght);
-  Teleplot.sendUInt("In-V", data);
   if(lenght == 8 && next.decode(data)) {
-    Serial.printf("%d %d %d\n", id, next.type, next.data);
     // Update display data
     memcpy(rxTx.receiveBuff, INSTRUCTION_STR[next.type], MSG_BUFF_LEN);
     rxTx.received = MSG_BUFF_LEN;
     id++;
       
     // Send confirmation
-    RfTransmitter.transmit(1, 1);
-    Teleplot.sendUInt("Out-D", lenght);
-    Teleplot.sendUInt("Out-V", data);
+    ack.data = id;
+    lenght = ack.encode(data);
+    RfTransmitter.transmit(data, lenght);
     RfReceiver.reset();
     
     processInstruction();
@@ -199,7 +189,6 @@ void rfReceive() {
     time ended = micros();
     if(ended - started > 0) rf.topSpeed = 1e6 / (ended - started);
   }
-  Serial.flush();
 }
 
 
@@ -213,7 +202,7 @@ void distanceMeasure() {
   time duration_sum = 0;
 
   // Do multiple measurements
-  for(u8 i = 0; i < 32; i++) {
+  for(u8 i = 0; i < 8; i++) {
     if(DistanceSensor.measure(distance, duration)) {
       distance_sum += distance;
       duration_sum += duration;
@@ -230,12 +219,13 @@ void distanceMeasure() {
 }
 
 Task tasks[] = {
-  {10, &distanceMeasure},
+  {1'000, &motorUpdate},
+  {5'000, &rfReceive},
+  {10'000, &distanceMeasure},
   {10'000, &laserReceive},
-  {10'000, &rfReceive},
-  {10'000, &displayUpdate}
+  {10'000, &displayUpdate},
 };
-TaskQueue scheduler(4, tasks);
+TaskQueue scheduler(5, tasks);
 
 void loop() {
   Switches.update();

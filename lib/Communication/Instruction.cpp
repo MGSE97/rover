@@ -1,17 +1,23 @@
 #include "Instruction.h"
 
 const char* INSTRUCTION_STR[] = {
+  "Invalid",
   "Stop",
   "Left",
   "Right",
   "Forward",
   "Backward",
-  "Scan"
+  "Scan",
+  "Ack"
 };
 
 
 bool Instruction::decode(u32 encoded) {
-  type = (InstructionType)((encoded & 0xF0) >> 4);
+  // Skip unknown instruction
+  u8 instruction = (encoded & 0xF0) >> 4;
+  if(instruction == 0 || instruction > InstructionType::Ack) return false;
+
+  type = (InstructionType)instruction;
   data = encoded & 0xF;
   return encoded > 0xF;
 }

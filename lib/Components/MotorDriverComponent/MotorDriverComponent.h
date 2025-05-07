@@ -20,6 +20,13 @@ enum Direction {
   Stop
 };
 
+enum MotorState {
+  Stopped,
+  SpinUp,
+  Running,
+  Stopping
+};
+
 extern const char* DIRECTION_STR[];
 
 
@@ -28,21 +35,26 @@ class MotorDriverHwComponent : public HwComponent
   public:
     MotorPins Left;
     MotorPins Right;
+    u8 TargetSpeed;
     u8 CurrentSpeed;
+    Direction TargetDirection;
     Direction CurrentDirection;
-    u8 StopTime;
-    u8 SpinTime;
+    time TargetDuration;
+    time StopTime;
+    time SpinTime;
     u8 MaxSpeed;
+    u8 SpinSpeed;
 
-     MotorDriverHwComponent(MotorPins left, MotorPins right, u8 stop_time = 100, u8 spin_time = 100, u8 max_speed = 100);
+     MotorDriverHwComponent(MotorPins left, MotorPins right, time stop_time = 100, time spin_time = 100, u8 max_speed = 100, u8 spin_speed = 80);
     ~MotorDriverHwComponent();
 
     void init();
-    void drive(Direction direction, u8 speed);
+    void update();
+    void drive(Direction direction, u8 speed, time duration);
   
   private:
-    long int lastStarted = 0;
-    long int now = 0;
+    time lastMovement = 0;
+    MotorState state;
 
     void init(MotorPins side);
     void drop(MotorPins side);

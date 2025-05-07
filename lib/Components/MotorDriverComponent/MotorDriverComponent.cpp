@@ -8,14 +8,19 @@ const char* DIRECTION_STR[] = {
   "Stop"
 };
 
-MotorDriverHwComponent::MotorDriverHwComponent(MotorPins left, MotorPins right, u8 stop_time, u8 spin_time, u8 max_speed) {
+MotorDriverHwComponent::MotorDriverHwComponent(MotorPins left, MotorPins right, time stop_time, time spin_time, u8 max_speed, u8 spin_speed) {
   Left = left;
   Right = right;
   CurrentSpeed = 0;
   CurrentDirection = Stop;
+  TargetSpeed = 0;
+  TargetDirection = Stop;
+  TargetDuration = 0;
   StopTime = stop_time;
   SpinTime = spin_time;
   MaxSpeed = max_speed;    
+  SpinSpeed = spin_speed;
+  state = Stopped;
 }
 
 MotorDriverHwComponent::~MotorDriverHwComponent() {
@@ -28,32 +33,110 @@ void MotorDriverHwComponent::init() {
   init(Right);
 }
 
-void MotorDriverHwComponent::drive(Direction direction, u8 speed) {
-  now = millis();
-  long int elapsed = now - lastStarted;
-  
-  // In case of change direction, we:
-  //  1. wait a while for wheel to stop
-  //  2. Spin wheel with full power to break friction
-  //  3. Spin wheel with specified speed  
-  u8 safe_speed = 0;
-  if(direction != CurrentDirection) {
-    lastStarted = now;
-    safe_speed = 0;
-  } else if(elapsed > StopTime + SpinTime) {
-    safe_speed = map(speed, 0, 100, 0, MaxSpeed);
-  } else if(elapsed > StopTime) {
-    safe_speed = MaxSpeed;
-  } else {
-    safe_speed = 0;
-  }
+void MotorDriverHwComponent::drive(Direction direction, u8 speed, time duration) {
+  TargetSpeed = map(speed, 0, 100, 0, MaxSpeed);
+  TargetDirection = direction;
+  TargetDuration = duration;
+}
 
-  u8 power = map(safe_speed, 0, 100, 0, 255);
+
+/**
+ * Updates motor speed and direction based on target.
+ *
+ * General rules:
+ *  1. Wait a while for wheel to stop
+ *  2. Spin wheel with full power to break friction
+ *  3. Spin wheel with specified speed  
+ * 
+ * Implementation overview:
+ *  1. Moving at target speed and direction
+ *    - skip
+ *  2. Rover is moving
+ *    A. Same direction
+ *       * Spinned up (after SpinTime)
+ *          - update speed
+ *       * Moved long enough
+ *          - stop 
+ *    B. Different direction
+ *       * Stop
+ *          - set speed to 0
+ *  3. Rover is not moving (speed is 0)
+ *    * Stopped (after StopTime)
+ *      - update direction
+ *      - spin up (speed to MaxSpeed)
+ */
+void MotorDriverHwComponent::update() {
+  time now = millis();
+  time elapsed = now - lastMovement;
+
+  switch (state)
+  {
+    case Stopped:
+      if(TargetSpeed != 0) {
+        state = SpinUp;
+        CurrentSpeed = SpinSpeed;
+        CurrentDirection = TargetDirection;
+        lastMovement = now;
+      }
+      break;
+    case SpinUp:
+      if(elapsed >= SpinTime) {
+        state = Running;
+        CurrentSpeed = TargetSpeed;
+        lastMovement = now;
+      }
+      break;
+    case Running:
+      if(CurrentDirection != TargetDirection || elapsed >= TargetDuration) {
+        state = Stopping;
+        CurrentSpeed = 0;
+        TargetSpeed = 0;
+        lastMovement = now;
+      } else if(CurrentSpeed != TargetSpeed) {
+        CurrentSpeed = TargetSpeed;
+        lastMovement = now;
+      }
+      break;
+    case Stopping:
+      if(elapsed >= StopTime) {
+        state = Stopped;
+      }
+      break;
+  }
+/*
+  // Skip if current direction and speed matches target
+  if(CurrentSpeed == TargetSpeed && CurrentDirection == TargetDirection && elapsed < TargetDuration + SpinTime) return;
+
+  if(CurrentSpeed == 0 && TargetSpeed != 0) {
+    // Rover is stopping
+    if(elapsed >= StopTime) {
+      // Rover stopped -> spin up
+      lastMovement = now;
+      CurrentSpeed = SpinSpeed;
+      CurrentDirection = TargetDirection;
+    }
+  } else if(CurrentDirection == TargetDirection) {
+    // Rover is moving 
+    if(CurrentSpeed == TargetSpeed && elapsed >= TargetDuration + SpinTime) {
+      // Moved enough
+      CurrentSpeed = 0;
+      TargetSpeed = 0;
+    } else if(elapsed >= SpinTime) {
+      // Is spinned up
+      CurrentSpeed = TargetSpeed;
+    }
+  } else if(CurrentDirection != TargetDirection) {
+    // Stop
+    lastMovement = now;
+    CurrentSpeed = 0;
+  }*/
+
+  u8 power = map(CurrentSpeed, 0, 100, 0, 255);
   /*Teleplot.sendInt("Direction", direction);
   Teleplot.sendInt("Power", power);
   Teleplot.sendInt("Speed", speed);*/
 
-  switch (direction)
+  switch (CurrentDirection)
   {
     case Direction::Forward:
       set(Left, power, false);
@@ -76,9 +159,6 @@ void MotorDriverHwComponent::drive(Direction direction, u8 speed) {
       set(Right, 0, false);
       break;
   }
-
-  CurrentDirection = direction;
-  CurrentSpeed = speed;
 }
 
 void MotorDriverHwComponent::init(MotorPins side) {

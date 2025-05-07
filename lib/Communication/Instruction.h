@@ -5,12 +5,14 @@
 #include "Device.h"
 
 enum InstructionType {
-  StopMovement,
-  RotateLeft,
-  RotateRight,
-  MoveForward,
-  MoveBackward,
-  ScanArea,
+  Invalid = 0,
+  StopMovement = 1, // We skip 0 for transmission validation
+  RotateLeft = 2,
+  RotateRight = 3,
+  MoveForward = 4,
+  MoveBackward = 5,
+  ScanArea = 6,
+  Ack = 7,
 };
 
 extern const char* INSTRUCTION_STR[];

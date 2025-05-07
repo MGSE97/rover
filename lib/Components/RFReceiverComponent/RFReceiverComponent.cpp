@@ -45,13 +45,9 @@ u8 RFReceiver::receive(u32& value) {
   };
   
   // Check and return message
-  Teleplot.sendUInt("Px", Receiver.getReceivedProtocol());
-  Teleplot.sendUInt("Pe", Protocol); 
   if(Receiver.getReceivedProtocol() == Protocol) {
     u8 length = Receiver.getReceivedBitlength();
     value = Receiver.getReceivedValue();
-    Teleplot.sendUInt("Len", length); 
-    Teleplot.sendUInt("Val", value); 
     
     Receiver.resetAvailable();
     return length;
